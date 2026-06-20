@@ -86,11 +86,12 @@ export default async function RunResults({ params }: { params: Promise<{ runId: 
       )}
 
       <div className="card">
-        <strong>Next step:</strong> fix what failed (tweak your prompt or add a guardrail), then come
-        back, paste your new outputs, and run again to see the score go up.
-        <div>
-          <Link className="btn" href={`/features/${run.feature_id}/run`}>Re-run with new outputs →</Link>
-        </div>
+        {failures.length === 0 ? (
+          <><strong>🎉 All clear.</strong> Your AI passed every case here — nothing to fix.</>
+        ) : (
+          <><strong>That&apos;s everything you need.</strong> Copy the fix on each failure above into
+          your AI&apos;s prompt or settings — that&apos;s the whole job done.</>
+        )}
       </div>
     </>
   );
