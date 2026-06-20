@@ -7,7 +7,7 @@ const TEXT_TEMPLATE = [
   'Groundedness :: Every claim is supported by the real source/data — nothing invented',
   'In-context :: It answers the actual question; does not assume or drift',
   'Completeness :: It includes everything that matters and omits nothing critical',
-  'Format :: It has the right structure (e.g. correct timezone format, valid fields)',
+  'Format :: It has the right structure (e.g. correct format, valid fields)',
 ].join('\n');
 
 function parseDimensions(raw: string) {
@@ -38,9 +38,7 @@ export default async function RubricPage({ params }: { params: Promise<{ id: str
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
-
   const { data: rubric } = await supabase.from('rubrics').select('dimensions').eq('feature_id', id).maybeSingle();
-
   const existingText = rubric?.dimensions?.length
     ? (rubric.dimensions as { name: string; passing_criteria: string }[]).map((d) => `${d.name} :: ${d.passing_criteria}`).join('\n')
     : TEXT_TEMPLATE;
@@ -49,7 +47,7 @@ export default async function RubricPage({ params }: { params: Promise<{ id: str
     <>
       <p className="muted"><Link href={`/features/${id}`}>← Back to feature</Link></p>
       <h1>Rubric — how to grade</h1>
-      <p className="muted">One rule per line, in the form <strong>Name :: passes when…</strong>. We&apos;ve pre-filled a good starting set for text answers — edit freely.</p>
+      <div className="tip">📏 <strong>How should Evalmate decide an answer is “good”?</strong> Each line is one thing to check. We&apos;ve filled in a solid starter set — keep it, tweak it, or add your own. Format: <strong>Name :: passes when…</strong></div>
       <form action={saveRubric}>
         <input type="hidden" name="featureId" value={id} />
         <textarea name="dimensions" defaultValue={existingText} style={{ minHeight: 200 }} />

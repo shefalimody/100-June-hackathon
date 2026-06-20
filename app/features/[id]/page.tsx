@@ -14,7 +14,21 @@ async function addCase(formData: FormData) {
   const isCal = formData.get('is_calibration') === 'on';
   const calVerdict = isCal ? String(formData.get('calibration_verdict') || 'pass') : null;
   if (!input || !expected) return;
+  // Skip exact duplicates of the same input for this feature.
+  const { data: dupe } = await supabase.from('golden_cases').select('id').eq('feature_id', featureId).eq('input', input).maybeSingle();
+  if (dupe) { revalidatePath(`/features/${featureId}`); return; }
   await supabase.from('golden_cases').insert({ feature_id: featureId, user_id: user.id, input, expected, is_calibration: isCal, calibration_verdict: calVerdict });
+  revalidatePath(`/features/${featureId}`);
+}
+
+async function deleteCase(formData: FormData) {
+  'use server';
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  const caseId = String(formData.get('caseId'));
+  const featureId = String(formData.get('featureId'));
+  await supabase.from('golden_cases').delete().eq('id', caseId);
   revalidatePath(`/features/${featureId}`);
 }
 
@@ -23,13 +37,10 @@ export default async function FeaturePage({ params }: { params: Promise<{ id: st
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
-
   const { data: feature } = await supabase.from('features').select('*').eq('id', id).single();
   if (!feature) redirect('/dashboard');
-
   const { data: cases } = await supabase.from('golden_cases').select('*').eq('feature_id', id).order('created_at');
   const { data: rubric } = await supabase.from('rubrics').select('*').eq('feature_id', id).maybeSingle();
-
   const hasCases = (cases?.length ?? 0) > 0;
   const hasRubric = (rubric?.dimensions?.length ?? 0) > 0;
   const ready = hasCases && hasRubric;
@@ -40,31 +51,44 @@ export default async function FeaturePage({ params }: { params: Promise<{ id: st
       <h1>{feature.name}</h1>
       {feature.description && <p className="muted">{feature.description}</p>}
 
+      <div className="tip">📝 <strong>Step 2 — build your “answer key.”</strong> Add a few real questions you&apos;d ask this AI, and what a <em>good</em> answer looks like. Write the good answer <em>before</em> you test — that&apos;s the whole trick.</div>
+
       <h2>Golden set — your answer key ({cases?.length ?? 0})</h2>
-      <p className="muted">The right answers, written before you test. Mark a couple as “calibration” (you already know if they pass or fail) — that&apos;s how we check the AI grader can be trusted.</p>
       {hasCases ? (
         <table>
-          <thead><tr><th>Input</th><th>Good answer</th><th>Calibration?</th></tr></thead>
+          <thead><tr><th>Input</th><th>Good answer</th><th>Calibration?</th><th></th></tr></thead>
           <tbody>
             {cases!.map((c) => (
-              <tr key={c.id}><td>{c.input}</td><td>{c.expected}</td><td>{c.is_calibration ? `yes (${c.calibration_verdict})` : '—'}</td></tr>
+              <tr key={c.id}>
+                <td>{c.input}</td>
+                <td>{c.expected}</td>
+                <td>{c.is_calibration ? `yes (${c.calibration_verdict})` : '—'}</td>
+                <td>
+                  <form action={deleteCase}>
+                    <input type="hidden" name="caseId" value={c.id} />
+                    <input type="hidden" name="featureId" value={id} />
+                    <button className="trash" title="Delete this case">🗑</button>
+                  </form>
+                </td>
+              </tr>
             ))}
           </tbody>
         </table>
-      ) : (<p className="muted">No cases yet.</p>)}
+      ) : (<p className="muted">No cases yet — add your first below.</p>)}
 
       <div className="card">
         <h2>Add a case</h2>
         <form action={addCase}>
           <input type="hidden" name="featureId" value={id} />
-          <label>Input (what you give the AI)</label>
-          <textarea name="input" required />
-          <label>Good answer (what it SHOULD give — write this first)</label>
-          <textarea name="expected" required />
+          <label>Input — a question or request you&apos;d give the AI</label>
+          <textarea name="input" placeholder="e.g. I have oily skin — what&apos;s a simple morning routine?" required />
+          <label>Good answer — what it SHOULD say (write this first)</label>
+          <textarea name="expected" placeholder="e.g. Gentle cleanser, oil-free moisturiser, SPF 30+; salicylic acid for breakouts; see a derm if severe." required />
           <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontWeight: 400 }}>
             <input type="checkbox" name="is_calibration" style={{ width: 'auto' }} />
-            This is a calibration case (I already know the right verdict)
+            This is a calibration case (I already know if it should pass or fail)
           </label>
+          <p className="muted" style={{ fontSize: 12.5, marginTop: 4 }}>Tip: add one case you KNOW should pass and one you KNOW should fail — that&apos;s how Evalmate proves its grader can be trusted.</p>
           <label>If calibration: do you already know this one passes or fails?</label>
           <select name="calibration_verdict" defaultValue="pass">
             <option value="pass">I know it should PASS</option>

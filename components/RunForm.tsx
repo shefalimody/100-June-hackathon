@@ -17,12 +17,8 @@ function dictate(setter: (v: string) => void, btn: HTMLButtonElement) {
   const old = btn.textContent;
   btn.textContent = '🎙️';
   r.onresult = (e: any) => setter(e.results[0][0].transcript);
-  r.onerror = () => {
-    btn.textContent = old;
-  };
-  r.onend = () => {
-    btn.textContent = old;
-  };
+  r.onerror = () => { btn.textContent = old; };
+  r.onend = () => { btn.textContent = old; };
   r.start();
 }
 
@@ -55,9 +51,9 @@ export default function RunForm({
       body: JSON.stringify(payload),
     });
     const data = await res.json();
-    setBusy(false);
     if (!res.ok) {
-      setErr(data.error || 'Something went wrong');
+      setBusy(false);
+      setErr(data.error || 'Something went wrong — please try again.');
       return;
     }
     router.push(`/runs/${data.runId}`);
@@ -65,7 +61,7 @@ export default function RunForm({
 
   return (
     <form onSubmit={submit}>
-      <p className="muted">For each input, run it through your AI and paste what it gave back (or talk it in 🎤).</p>
+      <p className="muted">For each input, run it through your AI and paste what it gave back (or talk it in 🎤). Then hit Grade.</p>
       {cases.map((c, i) => (
         <div className="card" key={c.id}>
           <div className="muted">Case {i + 1} — input</div>
@@ -75,6 +71,7 @@ export default function RunForm({
             <textarea
               value={outputs[c.id] ?? ''}
               onChange={(e) => setOutputs({ ...outputs, [c.id]: e.target.value })}
+              placeholder="Paste exactly what your AI replied here…"
               required
             />
             <button
@@ -89,8 +86,9 @@ export default function RunForm({
         </div>
       ))}
       <button type="submit" disabled={busy}>
-        {busy ? 'Grading… (this can take a moment)' : 'Grade all outputs'}
+        {busy ? (<><span className="spinner" />Grading… hang tight</>) : 'Grade all outputs'}
       </button>
+      {busy && <p className="muted" style={{ marginTop: 8 }}>Evalmate is reading each answer against your rubric — this takes a few seconds per case.</p>}
       {err && <p style={{ color: '#dc2626', fontSize: 14 }}>{err}</p>}
     </form>
   );
