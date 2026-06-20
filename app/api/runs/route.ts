@@ -3,7 +3,6 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { gradeOutput, type Dimension } from '@/lib/ai/grade';
 
-// Hobby plan caps at 60s — keep golden sets ≤10.
 export const maxDuration = 300;
 
 type PastedOutput = { caseId: string; output: string };
@@ -21,10 +20,7 @@ export async function POST(req: Request) {
     outputs: PastedOutput[];
   };
   if (!featureId || !rubricId || !Array.isArray(outputs)) {
-    return NextResponse.json(
-      { error: 'Missing featureId, rubricId, or outputs' },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: 'Missing featureId, rubricId, or outputs' }, { status: 400 });
   }
 
   const { data: rubric } = await supabase
@@ -80,11 +76,12 @@ export async function POST(req: Request) {
         verdict: grade.verdict,
         dimension_scores: grade.dimension_scores,
         overall_reason: grade.overall_reason,
+        coaching_nudge: grade.coaching_nudge,
+        suggested_fix: grade.suggested_fix,
       });
     }
 
-    const calibrationAccuracy =
-      calibrationTotal > 0 ? calibrationCorrect / calibrationTotal : null;
+    const calibrationAccuracy = calibrationTotal > 0 ? calibrationCorrect / calibrationTotal : null;
 
     await supabase
       .from('runs')
