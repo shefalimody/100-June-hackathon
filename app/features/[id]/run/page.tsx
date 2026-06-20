@@ -18,6 +18,7 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
     <>
       <p className="muted"><Link href={`/features/${id}`}>← Back to feature</Link></p>
       <h1>Run the check</h1>
+      <div className="tip">🔍 <strong>Why this step?</strong> You&apos;re about to show Evalmate what your AI <em>actually</em> said, so it can grade each answer against the good answer you wrote. This is the moment you find out whether your AI is actually good — or just sounds good.</div>
       <RunForm featureId={id} rubricId={rubric.id} cases={cases} />
     </>
   );

@@ -11,8 +11,10 @@ async function addCase(formData: FormData) {
   const featureId = String(formData.get('featureId'));
   const input = String(formData.get('input') || '').trim();
   const expected = String(formData.get('expected') || '').trim();
-  const isCal = formData.get('is_calibration') === 'on';
-  const calVerdict = isCal ? String(formData.get('calibration_verdict') || 'pass') : null;
+  // One control now: 'none' | 'pass' | 'fail'. A case counts as calibration only if a known verdict is set,
+  // so a verdict can never be silently dropped (the old checkbox + separate dropdown could mismatch).
+  const calVerdict = String(formData.get('calibration_verdict') || 'none');
+  const isCal = calVerdict === 'pass' || calVerdict === 'fail';
   if (!input || !expected) return;
   // Skip exact duplicates of the same input for this feature.
   const { data: dupe } = await supabase.from('golden_cases').select('id').eq('feature_id', featureId).eq('input', input).maybeSingle();
@@ -82,18 +84,16 @@ export default async function FeaturePage({ params }: { params: Promise<{ id: st
           <input type="hidden" name="featureId" value={id} />
           <label>Input — a question or request you&apos;d give the AI</label>
           <textarea name="input" placeholder="e.g. I have oily skin — what&apos;s a simple morning routine?" required />
+          <p className="muted" style={{ fontSize: 12.5, marginTop: 4 }}>Use a <strong>real</strong> prompt you&apos;d actually send your AI — not a made-up demo. Fake inputs give fake results.</p>
           <label>Good answer — what it SHOULD say (write this first)</label>
           <textarea name="expected" placeholder="e.g. Gentle cleanser, oil-free moisturiser, SPF 30+; salicylic acid for breakouts; see a derm if severe." required />
-          <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontWeight: 400 }}>
-            <input type="checkbox" name="is_calibration" style={{ width: 'auto' }} />
-            This is a calibration case (I already know if it should pass or fail)
-          </label>
-          <p className="muted" style={{ fontSize: 12.5, marginTop: 4 }}>Tip: add one case you KNOW should pass and one you KNOW should fail — that&apos;s how Evalmate proves its grader can be trusted.</p>
-          <label>If calibration: do you already know this one passes or fails?</label>
-          <select name="calibration_verdict" defaultValue="pass">
-            <option value="pass">I know it should PASS</option>
-            <option value="fail">I know it should FAIL</option>
+          <label>Do you already know the right verdict for this case? <span style={{ fontWeight: 400 }}>(optional)</span></label>
+          <select name="calibration_verdict" defaultValue="none">
+            <option value="none">No — just a normal case</option>
+            <option value="pass">Yes — I know it should PASS</option>
+            <option value="fail">Yes — I know it should FAIL</option>
           </select>
+          <p className="muted" style={{ fontSize: 12.5, marginTop: 4 }}>Tip: add one case you KNOW should pass and one you KNOW should fail — that&apos;s how Evalmate proves its grader can be trusted (your “trust check”).</p>
           <button type="submit">Add case</button>
         </form>
       </div>
