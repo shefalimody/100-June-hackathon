@@ -28,7 +28,7 @@ export default function LoginPage() {
       return;
     }
     if (mode === 'up') {
-      setMsg('Account created. If email confirmation is on, check your inbox — otherwise sign in.');
+      setMsg('Account created — you can sign in now.');
       setMode('in');
       return;
     }
@@ -38,8 +38,8 @@ export default function LoginPage() {
 
   return (
     <div className="card" style={{ maxWidth: 420, margin: '60px auto' }}>
-      <h1>Eval Co-pilot</h1>
-      <p className="muted">Is your AI actually good, or does it just run? Let&apos;s find out.</p>
+      <h1>Evalmate</h1>
+      <p className="muted">Your AI&apos;s honest mate. Is it actually good, or does it just run? Let&apos;s find out.</p>
       <form onSubmit={submit}>
         <label>Email</label>
         <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
